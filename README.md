@@ -12,7 +12,6 @@ Ref: https://scrapbox.io/villagepump/Scrapbox_ChatGPT_Connector
 
 Install by pip:
 
-
 ```
 $ pip install markdown_chatgpt_connector
 ```

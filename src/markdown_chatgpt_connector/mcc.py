@@ -1,10 +1,10 @@
-import json
 import logging
 import os
 import pickle
 import re
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import openai
@@ -115,19 +115,22 @@ class MCC:
     def update_from_markdown(self) -> int:
         if not self.set_key():
             return 1
-        data = json.load(open(self.input_dir, encoding="utf8"))
-        for p in tqdm(data["pages"]):
+        path = Path(self.input_dir)
+        md_files = list(path.glob("**/*.md"))
+        md_files += list(path.glob("**/*.markdown"))
+        for f in tqdm(sorted(md_files)):
             buf = []
-            title = p["title"]
-            for line in p["lines"]:
-                line = line.strip()
-                line = re.sub(r"https?://[^\s]+", "URL", line)
-                line = re.sub(r"[\s]+", " ", line)
-                buf.append(line)
-                body = " ".join(buf)
-                if self.get_size(body) > self.block_size:
-                    self.get_or_make(body, title)
-                    buf = buf[len(buf) // 2 :]
+            title = f.name
+            with open(f) as fp:
+                for line in fp.readlines():
+                    line = line.strip()
+                    line = re.sub(r"https?://[^\s]+", "URL", line)
+                    line = re.sub(r"[\s]+", " ", line)
+                    buf.append(line)
+                    body = " ".join(buf)
+                    if self.get_size(body) > self.block_size:
+                        self.get_or_make(body, title)
+                        buf = buf[len(buf) // 2 :]
             body = " ".join(buf).strip()
             if body:
                 self.get_or_make(body, title)
