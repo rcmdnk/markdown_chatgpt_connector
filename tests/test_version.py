@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from tcc import __version__
+from text_chatgpt_connector import __version__
 
 def test_version():
     try:
@@ -9,4 +9,4 @@ def test_version():
         import tomli as tomllib
     with open(Path(__file__).parents[1] / "pyproject.toml", "rb") as f:
         version = tomllib.load(f)["tool"]["poetry"]["version"]
-    assert version == tcc.__version__
+    assert version == __version__

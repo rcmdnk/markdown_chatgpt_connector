@@ -82,8 +82,8 @@ class TCC:
             self.cache = {}
 
     def set_key(self, key: str = "") -> bool:
-        if key is not None:
-            self.key: str = key
+        if key:
+            self.key = key
         if not self.key:
             self.key = os.environ.get("OPENAI_API_KEY", "")
         if not self.key:
@@ -132,7 +132,7 @@ class TCC:
         path = Path(self.input_dir)
         files = []
         for suffix in self.input_suffix.split(","):
-            files = list(path.glob(f"**/*.{suffix}"))
+            files += list(path.glob(f"**/*.{suffix}"))
         if not files:
             self.log.error(f"No {', '.join(['*.' + x for x in self.input_suffix.split(',')])} found in {self.input_dir}.")
             return 1
