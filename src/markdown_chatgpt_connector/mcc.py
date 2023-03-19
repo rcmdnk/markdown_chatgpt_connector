@@ -21,19 +21,21 @@ class MCC:
     input_dir : str
         Path to the input directory including markdown files (*.md/*.markdown).
     output_file : str
-        Path to the output file.
+        Path to the output pickle file.
     key : str
         OpenAI API key. If not given, try to get from environment variable: OPENAI_API_KEY.
     character_encoding: str
         Character encoding for input file, by default "utf-8"
-    block_size : int
-        Block size for embedding, by default 500
-    embed_max_size : int
-        Max size for embedding, by default 8150
+    chat_model: str
+        Chat model name, by default "gpt-3.5-turbo"
     encoding : str
         Encoding name for tiktoken , by default "cl100k_base"
     embedding : str
         Embedding model name, by default "text-embedding-ada-002"
+    block_size : int
+        Block size for embedding, by default 500
+    embed_max_size : int
+        Max size for embedding, by default 8150
     max_prompt_size : int
         Max size for prompt, by default 4096
     return_size : int
@@ -44,14 +46,15 @@ class MCC:
         Question template.
     """
 
-    input_dir: str
+    input_dir: str = ""
     output_file: str = "markdown.pickle"
     key: str = ""
     character_encoding: str = "utf-8"
-    block_size: int = 500
-    embed_max_size: int = 8150  # actual limit is 8191
+    chat_model: str = "gpt-3.5-turbo"
     encoding: str = "cl100k_base"
     embedding: str = "text-embedding-ada-002"
+    block_size: int = 500
+    embed_max_size: int = 8150  # actual limit is 8191
     max_prompt_size: int = 4096
     return_size: int = 250
     prompt: str = """Read the following text and answer the question. Your reply should be shorter than 250 characters.
@@ -61,7 +64,7 @@ class MCC:
 
 ## Question
 {input}"""
-    question: str = ""
+    question: str = "もっとも大事な問いとは何だろう？"
 
     def __post_init__(self) -> None:
         self.log = logging.getLogger(__name__)
@@ -120,6 +123,9 @@ class MCC:
     def update_from_markdown(self) -> int:
         if not self.set_key():
             return 1
+        if not self.input_dir:
+            self.log.error("Set input directory")
+            return 1
         path = Path(self.input_dir)
         md_files = list(path.glob("**/*.md"))
         md_files += list(path.glob("**/*.markdown"))
@@ -174,7 +180,6 @@ class MCC:
                 break
             to_use.append(body)
             used_title.append(title)
-            self.log.info("\nUSE:", title, body)
             rest -= size
 
         text = "\n\n".join(to_use)
@@ -185,7 +190,7 @@ class MCC:
 
         self.log.info("\nTHINKING...")
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=self.chat_model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.return_size,
             temperature=0.0,
@@ -197,6 +202,6 @@ class MCC:
 
         self.log.info("\nANSWER:")
         self.log.info(f">>>> {self.question}")
-        self.log.info(">", content)
-        self.log.info("\nref.", *[f"[{s}]" for s in used_title])
+        self.log.info(f"> {content}")
+        self.log.info(f"\nref. {', '.join(used_title)}")
         return 0
