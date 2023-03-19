@@ -41,9 +41,11 @@ def main() -> int:
         key=args.key,
         question=args.question,
     )
+    if args.command not in ["index", "ask"]:
+        log.error(f"Invalid command: {args.command}. Must be index or ask")
+        return 1
     if args.command == "index":
         return mcc.update_from_markdown()
-
     if args.command == "ask":
         mcc.ask()
 
