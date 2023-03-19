@@ -19,17 +19,19 @@ class MCC:
     Parameters
     ----------
     input_dir : str
-        Path to the input file.
+        Path to the input directory including markdown files (*.md/*.markdown).
     output_file : str
         Path to the output file.
     key : str
         OpenAI API key. If not given, try to get from environment variable: OPENAI_API_KEY.
+    character_encoding: str
+        Character encoding for input file, by default "utf-8"
     block_size : int
         Block size for embedding, by default 500
     embed_max_size : int
         Max size for embedding, by default 8150
     encoding : str
-        Encoding name, by default "cl100k_base"
+        Encoding name for tiktoken , by default "cl100k_base"
     embedding : str
         Embedding model name, by default "text-embedding-ada-002"
     max_prompt_size : int
@@ -43,10 +45,11 @@ class MCC:
     """
 
     input_dir: str
-    output_file: str
-    key: str
+    output_file: str = "markdown.pickle"
+    key: str = ""
+    character_encoding: str = "utf-8"
     block_size: int = 500
-    embed_max_size = 8150  # actual limit is 8191
+    embed_max_size: int = 8150  # actual limit is 8191
     encoding: str = "cl100k_base"
     embedding: str = "text-embedding-ada-002"
     max_prompt_size: int = 4096
@@ -65,6 +68,8 @@ class MCC:
         self.enc = tiktoken.get_encoding(self.encoding)
         self.prompt = self.prompt.strip()
         self.question = self.question.strip()
+        if not self.output_file.endswith(".pickle"):
+            self.output_file = self.output_file + ".pickle"
         try:
             self.cache = pickle.load(open(self.output_file, "rb"))
         except FileNotFoundError:
