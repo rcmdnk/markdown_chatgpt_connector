@@ -1,10 +1,15 @@
 [tool.poetry]
-name = "markdown-chatgpt-connector"
+name = "text-chatgpt-connector"
 version = "0.0.1"
-description = "ChatGPT reads Markdown files"
+description = "ChatGPT reads Text files"
 authors = ["rcmdnk <rcmdnk@gmail.com>"]
 readme = "README.md"
-packages = [{include = "markdown_chatgpt_connector", from = "src"}]
+packages = [{include = "text_chatgpt_connector", from = "src"}]
+
+repository = "https://github.com/rcmdnk/text_chatgpt_connector"
+homepage = "https://github.com/rcmdnk/text_chatgpt_connector"
+license = "MIT"
+keywords = ['API', 'ChatGPT', "AI"]
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<3.12"
@@ -23,7 +28,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-mcc = "markdown_chatgpt_connector.main:main"
+tcc = "text_chatgpt_connector.main:main"
 [tool.pytest.ini_options]
 addopts = "-n auto"
 testpaths = ["tests",]

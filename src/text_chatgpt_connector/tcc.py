@@ -13,13 +13,15 @@ from tqdm import tqdm
 
 
 @dataclass
-class MCC:
+class TCC:
     """OpenAI Chat Completion.
 
     Parameters
     ----------
     input_dir : str
-        Path to the input directory including markdown files (*.md/*.markdown).
+        Path to the input directory including text files.
+    input_suffix: str
+        Comma separated suffixes of input files, by default "txt,md,markdown"
     output_file : str
         Path to the output pickle file.
     key : str
@@ -47,7 +49,8 @@ class MCC:
     """
 
     input_dir: str = ""
-    output_file: str = "markdown.pickle"
+    input_suffix: str = "txt,md,markdown"
+    output_file: str = "index.pickle"
     key: str = ""
     character_encoding: str = "utf-8"
     chat_model: str = "gpt-3.5-turbo"
@@ -57,19 +60,19 @@ class MCC:
     embed_max_size: int = 8150  # actual limit is 8191
     max_prompt_size: int = 4096
     return_size: int = 250
-    prompt: str = """Read the following text and answer the question. Your reply should be shorter than 250 characters.
+    prompt: str = """Read the following text and answer the question. Your reply should be shorter than RETURN_SIZE characters.
 
 ## Text
 {text}
 
 ## Question
 {input}"""
-    question: str = "もっとも大事な問いとは何だろう？"
+    question: str = "What is the most important question?"
 
     def __post_init__(self) -> None:
         self.log = logging.getLogger(__name__)
         self.enc = tiktoken.get_encoding(self.encoding)
-        self.prompt = self.prompt.strip()
+        self.prompt = self.prompt.replace("RETURN_SIZE", str(self.return_size)).strip()
         self.question = self.question.strip()
         if not self.output_file.endswith(".pickle"):
             self.output_file = self.output_file + ".pickle"
@@ -120,16 +123,20 @@ class MCC:
             pickle.dump(self.cache, open(self.output_file, "wb"))
         return self.cache[body]
 
-    def update_from_markdown(self) -> int:
+    def update_from_text(self) -> int:
         if not self.set_key():
             return 1
         if not self.input_dir:
             self.log.error("Set input directory")
             return 1
         path = Path(self.input_dir)
-        md_files = list(path.glob("**/*.md"))
-        md_files += list(path.glob("**/*.markdown"))
-        for f in tqdm(sorted(md_files)):
+        files = []
+        for suffix in self.input_suffix.split(","):
+            files = list(path.glob(f"**/*.{suffix}"))
+        if not files:
+            self.log.error(f"No {', '.join(['*.' + x for x in self.input_suffix.split(',')])} found in {self.input_dir}.")
+            return 1
+        for f in tqdm(sorted(files)):
             buf = []
             title = f.name
             with open(f) as fp:
