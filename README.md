@@ -20,10 +20,10 @@ and run
 
 ```
 $ poetry install
-$ poetry run mcc ...
+$ poetry run tcc ...
 ```
 
-You can run `mcc` directly if you enter the poetry virtual environment:
+You can run \`tcc directly if you enter the poetry virtual environment:
 
 ```
 $ poetry shell
@@ -31,30 +31,44 @@ $ poetry shell
 
 ## How to use
 
+### Make index
+
 To make index, run:
 
 ```
-$ mcc index -i <input_dir>
+$ tcc index -i <input_dir>
 ```
 
 `input_dir` is the directory which has text files (with suffix of `.txt`, `.md` or `.markdown` by default).
 
-This will create pickle file named **output.pickle**.
+This will create pickle file named **index.pickle**.
 If you want to change the name, set `-o <output_file>`.
 
-To ask question, run:
+If you run with different `input_dir` for the same `output_file`,
+the index is appended to the previous one.
+
+### Ask question
+
+To ask a question, run:
 
 ```
-$ mcc ask -q  "もっとも大事な問いとは何だろう？"
+$ tcc ask -q  "もっとも大事な問いとは何だろう？"
 ```
 
-Following options are available:
+If you want compare the answer without index, run with `-n` (`--no_index`) option:
+
+```
+$ tcc ask -n -q  "もっとも大事な問いとは何だろう？"
+```
+
+### Usage
 
 ```
 usage: tcc [-h] [-i INPUT_DIR] [-s INPUT_SUFFIX] [-o OUTPUT_FILE] [-k KEY] [-c CHARACTER_ENCODING] [--chat_model CHAT_MODEL]
-           [--encoding ENCODING] [--embedding EMBEDDING] [--block_size BLOCK_SIZE] [--embed_max_size EMBED_MAX_SIZE]
-           [--max_prompt_size MAX_PROMPT_SIZE] [--return_size RETURN_SIZE] [--prompt PROMPT] [-q QUESTION] [-v VERSION]
-           command
+           [--encoding ENCODING] [--embedding EMBEDDING] [--remain_url] [--keep_spaces] [--block_size BLOCK_SIZE]
+           [--embed_max_size EMBED_MAX_SIZE] [--max_prompt_size MAX_PROMPT_SIZE] [--return_size RETURN_SIZE] [--prompt PROMPT]
+           [--bare_prompt BARE_PROMPT] [-q QUESTION] [-n] [-v]
+           [command]
 
 positional arguments:
   command               Command (index or ask)
@@ -75,6 +89,8 @@ options:
   --encoding ENCODING   Encoding name for tiktoken, default: "cl100k_base"
   --embedding EMBEDDING
                         Embedding model name, default: "text-embedding-ada-002"
+  --remain_url          Keep URL in the text
+  --keep_spaces         Keep spaces in the text
   --block_size BLOCK_SIZE
                         Block size for embedding, default: 500
   --embed_max_size EMBED_MAX_SIZE
@@ -84,9 +100,12 @@ options:
   --return_size RETURN_SIZE
                         Return size, default: 250
   --prompt PROMPT       Prompt template, default: "Read the following text and answer the question. Your reply should be shorter
-                        than 250 characters. ## Text {text} ## Question {input}"
+                        than 250 characters. ## Text {text} ## Question {question}"
+  --bare_prompt BARE_PROMPT
+                        Prompt template without index, default: "Read the following text and answer the question. Your reply
+                        should be shorter than 250 characters. ## Text {text} ## Question {question}"
   -q QUESTION, --question QUESTION
                         Question words for ask, default: "What is the most important question?"
-  -v VERSION, --version VERSION
-                        Show version
+  -n, --no_index        Ask the question directly
+  -v, --version         Show version
 ```

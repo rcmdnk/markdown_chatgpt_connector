@@ -34,6 +34,10 @@ class TCC:
         Encoding name for tiktoken , by default "cl100k_base"
     embedding : str
         Embedding model name, by default "text-embedding-ada-002"
+    remain_url: bool
+        Set to True to keep URL in the text, by default False (replace URL as "URL"
+    keep_spaces: bool
+        Set to True to keep spaces in the text, by default False (replace to single space)
     block_size : int
         Block size for embedding, by default 500
     embed_max_size : int
@@ -44,8 +48,14 @@ class TCC:
         Return size, by default 250
     prompt : str
         Prompt template.
+    bare_prompt: str
+        Prompt template without index.
     question : str
         Question template.
+    no_index: bool
+        Set to True to ask the question directly
+    verbose: bool
+        Set to True to show detailed log
     """
 
     input_dir: str = ""
@@ -56,6 +66,8 @@ class TCC:
     chat_model: str = "gpt-3.5-turbo"
     encoding: str = "cl100k_base"
     embedding: str = "text-embedding-ada-002"
+    remain_url: bool = False
+    keep_spaces: bool = False
     block_size: int = 500
     embed_max_size: int = 8150  # actual limit is 8191
     max_prompt_size: int = 4096
@@ -66,13 +78,30 @@ class TCC:
 {text}
 
 ## Question
-{input}"""
+{question}"""
+    bare_prompt: str = """Answer the question. Your reply should be shorter than RETURN_SIZE characters.
+
+## Question
+{question}"""
     question: str = "What is the most important question?"
+    no_index: bool = False
+    verbose: bool = False
 
     def __post_init__(self) -> None:
         self.log = logging.getLogger(__name__)
+        if self.verbose:
+            if self.log.parent and self.log.parent.name != "root":
+                self.log.parent.setLevel(logging.DEBUG)
+            else:
+                self.log.setLevel(logging.DEBUG)
+
         self.enc = tiktoken.get_encoding(self.encoding)
-        self.prompt = self.prompt.replace("RETURN_SIZE", str(self.return_size)).strip()
+        self.prompt = self.prompt.replace(
+            "RETURN_SIZE", str(self.return_size)
+        ).strip()
+        self.bare_prompt = self.bare_prompt.replace(
+            "RETURN_SIZE", str(self.return_size)
+        ).strip()
         self.question = self.question.strip()
         if not self.output_file.endswith(".pickle"):
             self.output_file = self.output_file + ".pickle"
@@ -110,12 +139,23 @@ class TCC:
                 )
                 time.sleep(1)
             except Exception as e:
-                self.log.info(e)
+                self.log.debug(e)
                 time.sleep(1)
                 continue
             break
 
         return res["data"][0]["embedding"]
+
+    def get_files(self) -> list[Path]:
+        path = Path(self.input_dir)
+        files = []
+        for suffix in self.input_suffix.split(","):
+            files += list(path.glob(f"**/*.{suffix}"))
+        if not files:
+            self.log.error(
+                f"No {', '.join(['*.' + x for x in self.input_suffix.split(',')])} found in {self.input_dir}."
+            )
+        return sorted(files, key=lambda x: x.name)
 
     def get_or_make(self, body: str, title: str) -> tuple[list[float], str]:
         if body not in self.cache:
@@ -129,12 +169,11 @@ class TCC:
         if not self.input_dir:
             self.log.error("Set input directory")
             return 1
-        path = Path(self.input_dir)
-        files = []
-        for suffix in self.input_suffix.split(","):
-            files += list(path.glob(f"**/*.{suffix}"))
+        files = self.get_files()
         if not files:
-            self.log.error(f"No {', '.join(['*.' + x for x in self.input_suffix.split(',')])} found in {self.input_dir}.")
+            self.log.error(
+                f"No {', '.join(['*.' + x for x in self.input_suffix.split(',')])} found in {self.input_dir}."
+            )
             return 1
         for f in tqdm(sorted(files)):
             buf = []
@@ -142,8 +181,10 @@ class TCC:
             with open(f) as fp:
                 for line in fp.readlines():
                     line = line.strip()
-                    line = re.sub(r"https?://[^\s]+", "URL", line)
-                    line = re.sub(r"[\s]+", " ", line)
+                    if not self.remain_url:
+                        line = re.sub(r"https?://[^\s]+", "URL", line)
+                    if not self.keep_spaces:
+                        line = re.sub(r"[\s]+", " ", line)
                     buf.append(line)
                     body = " ".join(buf)
                     if self.get_size(body) > self.block_size:
@@ -157,7 +198,9 @@ class TCC:
     def get_sorted(self, query: str) -> list[tuple[float, str, str]]:
         q = np.array(self.embed(query))
         buf = []
-        for body, (v, title) in tqdm(self.cache.items()):
+        for body, (v, title) in tqdm(
+            self.cache.items(), disable=not self.verbose
+        ):
             buf.append((q.dot(v), body, title))
         buf.sort(reverse=True)
         return buf
@@ -165,7 +208,8 @@ class TCC:
     def ask(self) -> int:
         if not self.set_key():
             return 1
-        prompt_size = self.get_size(self.prompt)
+        prompt = self.bare_prompt if self.no_index else self.prompt
+        prompt_size = self.get_size(prompt)
         rest = self.max_prompt_size - self.return_size - prompt_size
         if not self.question:
             self.log.error("Ask question!")
@@ -175,27 +219,30 @@ class TCC:
             self.log.error("too large input!")
             return 1
         rest -= input_size
-        samples = self.get_sorted(self.question)
 
-        to_use = []
-        used_title = []
-        for _sim, body, title in samples:
-            if title in used_title:
-                continue
-            size = self.get_size(body)
-            if rest < size:
-                break
-            to_use.append(body)
-            used_title.append(title)
-            rest -= size
+        if not self.no_index:
+            samples = self.get_sorted(self.question)
 
-        text = "\n\n".join(to_use)
-        prompt = self.prompt.format(input=self.question, text=text)
+            to_use = []
+            used_title = []
+            for _sim, body, title in samples:
+                if title in used_title:
+                    continue
+                size = self.get_size(body)
+                if rest < size:
+                    break
+                to_use.append(body)
+                used_title.append(title)
+                rest -= size
+            text = "\n\n".join(to_use)
+            prompt = prompt.format(question=self.question, text=text)
+        else:
+            prompt = prompt.format(question=self.question)
 
-        self.log.info("\nPROMPT:")
-        self.log.info(prompt)
+        self.log.debug("\nPROMPT:")
+        self.log.debug(prompt)
 
-        self.log.info("\nTHINKING...")
+        self.log.debug("\nTHINKING...")
         response = openai.ChatCompletion.create(
             model=self.chat_model,
             messages=[{"role": "user", "content": prompt}],
@@ -203,12 +250,13 @@ class TCC:
             temperature=0.0,
         )
 
-        self.log.info("\nRESPONSE:")
-        self.log.info(response)
+        self.log.debug("\nRESPONSE:")
+        self.log.debug(response)
         content = response["choices"][0]["message"]["content"]
 
-        self.log.info("\nANSWER:")
+        self.log.debug("\nANSWER:")
         self.log.info(f">>>> {self.question}")
         self.log.info(f"> {content}")
-        self.log.info(f"\nref. {', '.join(used_title)}")
+        if not self.no_index:
+            self.log.info(f"\nref. {', '.join(used_title)}")
         return 0

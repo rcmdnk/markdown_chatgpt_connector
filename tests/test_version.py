@@ -2,6 +2,7 @@ from pathlib import Path
 
 from text_chatgpt_connector import __version__
 
+
 def test_version():
     try:
         import tomllib

@@ -1,8 +1,8 @@
 import argparse
 import logging
 import sys
-from .__version__ import __version__
 
+from .__version__ import __version__
 from .tcc import TCC
 
 
@@ -29,13 +29,13 @@ def main() -> int:
     arg_parser.add_argument(
         "-s",
         "--input_suffix",
-        help=f"Comma separated suffixes of input files, \"{tcc.input_suffix}\"",
+        help=f'Comma separated suffixes of input files, "{tcc.input_suffix}"',
         type=str,
     )
     arg_parser.add_argument(
         "-o",
         "--output_file",
-        help=f"Output file (pickle), default: \"{tcc.output_file}\"",
+        help=f'Output file (pickle), default: "{tcc.output_file}"',
         type=str,
     )
     arg_parser.add_argument(
@@ -47,28 +47,38 @@ def main() -> int:
     arg_parser.add_argument(
         "-c",
         "--character_encoding",
-        help=f"Character encoding for input file, default: \"{tcc.character_encoding}\"",
+        help=f'Character encoding for input file, default: "{tcc.character_encoding}"',
         type=str,
     )
     arg_parser.add_argument(
         "--chat_model",
-        help=f"Chat model name, default: \"{tcc.chat_model}\"",
+        help=f'Chat model name, default: "{tcc.chat_model}"',
         type=str,
     )
     arg_parser.add_argument(
         "--encoding",
-        help=f"Encoding name for tiktoken, default: \"{tcc.encoding}\"",
+        help=f'Encoding name for tiktoken, default: "{tcc.encoding}"',
         type=str,
     )
     arg_parser.add_argument(
         "--embedding",
-        help=f"Embedding model name, default: \"{tcc.embedding}\"",
+        help=f'Embedding model name, default: "{tcc.embedding}"',
         type=str,
+    )
+    arg_parser.add_argument(
+        "--remain_url",
+        action="store_true",
+        help="Keep URL in the text",
+    )
+    arg_parser.add_argument(
+        "--keep_spaces",
+        action="store_true",
+        help="Keep spaces in the text",
     )
     arg_parser.add_argument(
         "--block_size",
         help=f"Block size for embedding, default: {tcc.block_size}",
-        type=str,
+        type=int,
     )
     arg_parser.add_argument(
         "--embed_max_size",
@@ -87,19 +97,36 @@ def main() -> int:
     )
     arg_parser.add_argument(
         "--prompt",
-        help=f"Prompt template, default: \"{tcc.prompt}\"",
+        help=f'Prompt template, default: "{tcc.prompt}"',
+        type=str,
+    )
+    arg_parser.add_argument(
+        "--bare_prompt",
+        help=f'Prompt template without index, default: "{tcc.prompt}"',
         type=str,
     )
     arg_parser.add_argument(
         "-q",
         "--question",
-        help=f"Question words for ask, default: \"{tcc.question}\"",
+        help=f'Question words for ask, default: "{tcc.question}"',
         type=str,
+    )
+    arg_parser.add_argument(
+        "-n",
+        "--no_index",
+        action="store_true",
+        help="Ask the question directly",
+    )
+    arg_parser.add_argument(
+        "-V",
+        "--verbose",
+        action="store_true",
+        help="Show detailed log",
     )
     arg_parser.add_argument(
         "-v",
         "--version",
-        action='store_true',
+        action="store_true",
         help="Show version",
     )
 
