@@ -81,7 +81,6 @@ jobs:
         with:
           python-version: "${{ matrix.python-version }}"
           pytest-cov-path: "src"
-          pytest-separate-benchmark: "1"
           coverage-push: "${{ env.is_main }}"
           coverage-push-condition: "branch=${{ env.main_branch }}, os=${{ env.main_os }}, python_version=${{ env.main_py_ver }}"
           pre-commit: "1"
