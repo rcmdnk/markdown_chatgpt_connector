@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "text-chatgpt-connector"
-version = "0.0.1"
+version = "0.0.2"
 description = "ChatGPT reads Text files"
 authors = ["rcmdnk <rcmdnk@gmail.com>"]
 readme = "README.md"

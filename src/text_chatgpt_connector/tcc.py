@@ -70,7 +70,7 @@ class TCC:
     keep_spaces: bool = False
     block_size: int = 500
     embed_max_size: int = 8150  # actual limit is 8191
-    max_prompt_size: int = 4096
+    max_prompt_size: int = 4097
     return_size: int = 250
     prompt: str = """Read the following text and answer the question. Your reply should be shorter than RETURN_SIZE characters.
 
@@ -109,6 +109,12 @@ class TCC:
             self.cache = pickle.load(open(self.output_file, "rb"))
         except FileNotFoundError:
             self.cache = {}
+
+        self.gpt_3 = ["text-curie-001", "text-babbage-001", "text-gpt-ada-001", "davinci", "curie", "babbage", "ada"]
+        if self.chat_model in self.gpt_3:
+            self.max_prompt_size = min(2049 - self.return_size, self.max_prompt_size)
+        else:
+            self.max_prompt_size = min(4097, self.max_prompt_size)
 
     def set_key(self, key: str = "") -> bool:
         if key:
@@ -243,16 +249,25 @@ class TCC:
         self.log.debug(prompt)
 
         self.log.debug("\nTHINKING...")
-        response = openai.ChatCompletion.create(
-            model=self.chat_model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=self.return_size,
-            temperature=0.0,
-        )
+        if self.chat_model in self.gpt_3:
+            response = openai.Completion.create(
+                model=self.chat_model,
+                prompt=prompt,
+                max_tokens=self.return_size,
+                temperature=0.0,
+            )
+            content = response["choices"][0]["text"]
+        else:
+            response = openai.ChatCompletion.create(
+                model=self.chat_model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=self.return_size,
+                temperature=0.0,
+            )
+            content = response["choices"][0]["message"]["content"]
 
         self.log.debug("\nRESPONSE:")
         self.log.debug(response)
-        content = response["choices"][0]["message"]["content"]
 
         self.log.debug("\nANSWER:")
         self.log.info(f">>>> {self.question}")
