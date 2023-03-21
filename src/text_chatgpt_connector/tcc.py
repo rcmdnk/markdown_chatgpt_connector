@@ -110,9 +110,19 @@ class TCC:
         except FileNotFoundError:
             self.cache = {}
 
-        self.gpt_3 = ["text-curie-001", "text-babbage-001", "text-gpt-ada-001", "davinci", "curie", "babbage", "ada"]
+        self.gpt_3 = [
+            "text-curie-001",
+            "text-babbage-001",
+            "text-gpt-ada-001",
+            "davinci",
+            "curie",
+            "babbage",
+            "ada",
+        ]
         if self.chat_model in self.gpt_3:
-            self.max_prompt_size = min(2049 - self.return_size, self.max_prompt_size)
+            self.max_prompt_size = min(
+                2049 - self.return_size, self.max_prompt_size
+            )
         else:
             self.max_prompt_size = min(4097, self.max_prompt_size)
 
