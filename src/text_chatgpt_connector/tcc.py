@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import pickle
@@ -9,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import openai
 import tiktoken
+from PyPDF2 import PdfReader
 from tqdm import tqdm
 
 
@@ -21,7 +24,8 @@ class TCC:
     input_dir : str
         Path to the input directory including text files.
     input_suffix: str
-        Comma separated suffixes of input files, by default "txt,md,markdown"
+        Comma separated suffixes of input files, by default "txt,md,markdown,pdf".
+        Other than pdf files, all files are treated as plain text files.
     output_file : str
         Path to the output pickle file.
     key : str
@@ -106,7 +110,8 @@ class TCC:
         if not self.output_file.endswith(".pickle"):
             self.output_file = self.output_file + ".pickle"
         try:
-            self.cache = pickle.load(open(self.output_file, "rb"))
+            with open(self.output_file, "rb") as f:
+                self.cache = pickle.load(f)
         except FileNotFoundError:
             self.cache = {}
 
@@ -176,7 +181,8 @@ class TCC:
     def get_or_make(self, body: str, title: str) -> tuple[list[float], str]:
         if body not in self.cache:
             self.cache[body] = (self.embed(body), title)
-            pickle.dump(self.cache, open(self.output_file, "wb"))
+            with open(self.output_file, "wb") as f:
+                pickle.dump(self.cache, f)
         return self.cache[body]
 
     def update_from_text(self) -> int:
@@ -194,18 +200,26 @@ class TCC:
         for f in tqdm(sorted(files)):
             buf = []
             title = f.name
-            with open(f) as fp:
-                for line in fp.readlines():
-                    line = line.strip()
-                    if not self.remain_url:
-                        line = re.sub(r"https?://[^\s]+", "URL", line)
-                    if not self.keep_spaces:
-                        line = re.sub(r"[\s]+", " ", line)
-                    buf.append(line)
-                    body = " ".join(buf)
-                    if self.get_size(body) > self.block_size:
-                        self.get_or_make(body, title)
-                        buf = buf[len(buf) // 2 :]
+            if f.suffix == ".pdf":
+                reader = PdfReader(f)
+                text = []
+                for page in reader.pages:
+                    text += page.extract_text().split("\n")
+            else:
+                with open(f) as fp:
+                    text = fp.readlines()
+
+            for line in text:
+                line = line.strip()
+                if not self.remain_url:
+                    line = re.sub(r"https?://[^\s]+", "URL", line)
+                if not self.keep_spaces:
+                    line = re.sub(r"[\s]+", " ", line)
+                buf.append(line)
+                body = " ".join(buf)
+                if self.get_size(body) > self.block_size:
+                    self.get_or_make(body, title)
+                    buf = buf[len(buf) // 2 :]
             body = " ".join(buf).strip()
             if body:
                 self.get_or_make(body, title)
