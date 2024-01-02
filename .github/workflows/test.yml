@@ -77,8 +77,10 @@ jobs:
           else
             echo "debug=0" >> $GITHUB_ENV
           fi
-      - uses: rcmdnk/python-action@v1
+      - uses: rcmdnk/python-action@v2
         with:
+          checkout: 1
+          setup-python: 1
           python-version: "${{ matrix.python-version }}"
           pytest-cov-path: "src"
           coverage-push: "${{ env.is_main }}"
